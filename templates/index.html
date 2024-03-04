@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* Estilos adicionales para el chat */
+        .chat-container {
+            max-width: 500px;
+            margin: auto;
+        }
+        .chat-messages {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container chat-container mt-5">
+        <div class="card">
+            <div class="card-header bg-primary text-white">Chat con Asistente Virtual</div>
+            <div class="card-body chat-messages">
+                <!-- Aquí se mostrarán los mensajes del chat -->
+            </div>
+            <div class="card-footer">
+                <div class="input-group">
+                    <input type="text" class="form-control" id="mensajeInput" placeholder="Escribe tu mensaje...">
+                    <button class="btn btn-primary" onclick="enviarMensaje()">Enviar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function enviarMensaje() {
+            var mensaje = document.getElementById('mensajeInput').value;
+            if (mensaje.trim() !== '') {
+                // Realizar la solicitud a la API
+                fetch('/api/' + mensaje + '/')
+                    .then(response => response.json())
+                    .then(data => {
+                        agregarMensaje('Tú:', mensaje);
+                        agregarMensaje('Asistente Virtual:', data.mensaje);
+                    })
+                    .catch(error => console.error('Error al enviar mensaje:', error));
+
+                // Limpiar el campo de entrada después de enviar el mensaje
+                document.getElementById('mensajeInput').value = '';
+            }
+        }
+
+        function agregarMensaje(emisor, mensaje) {
+            var chatMessages = document.querySelector('.chat-messages');
+            var mensajeHTML = `
+                <div class="mb-2">
+                    <strong>${emisor}</strong>: ${mensaje}
+                </div>
+            `;
+            chatMessages.innerHTML += mensajeHTML;
+
+            // Hacer scroll al último mensaje agregado
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+    </script>
+</body>
+</html>
