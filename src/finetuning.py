@@ -12,21 +12,22 @@ os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
 
 def format_dataset(example, tokenizer):
     encoding = tokenizer(
-        example["instruccion"] + " " + example["input"], 
-        truncation=True, 
-        padding="max_length", 
+        example["instruccion"] + " " + example["input"],
+        truncation=True,
+        padding="max_length",
         max_length=512,
-        return_tensors="pt"  # Asegúrate de devolver tensores de PyTorch
+        return_tensors="pt"
     )
     labels = tokenizer(
-        example["output"], 
-        truncation=True, 
-        padding="max_length", 
+        example["output"],
+        truncation=True,
+        padding="max_length",
         max_length=128,
         return_tensors="pt"
     )
-    encoding["labels"] = labels["input_ids"]
+    encoding["labels"] = labels["input_ids"].squeeze()  # Asegúrate de eliminar la dimensión extra
     return encoding
+
 
 
 def fine_tune_mistral(model_name, dataset_path, output_dir, epochs=1, batch_size=4, learning_rate=5e-5):
@@ -42,6 +43,7 @@ def fine_tune_mistral(model_name, dataset_path, output_dir, epochs=1, batch_size
     # Load and preprocess the dataset
     dataset = load_dataset("json", data_files=dataset_path, field="data")["train"]
     formatted_dataset = dataset.map(lambda x: format_dataset(x, tokenizer))
+
 
     # Define training arguments
     training_args = TrainingArguments(
