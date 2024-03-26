@@ -1,6 +1,6 @@
 import os
 from datasets import load_dataset
-from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments
+from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments, Trainer
 from trl import DPOTrainer
 from peft import LoraConfig, PeftModel, prepare_model_for_kbit_training, get_peft_model
 from accelerate import Accelerator
