@@ -7,9 +7,7 @@ from accelerate import Accelerator
 import torch
 torch.cuda.empty_cache()
 
-
 os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
-torch.cuda.empty_cache()
 
 
 def format_dataset(example):
@@ -27,7 +25,7 @@ def fine_tune_mistral(model_name, dataset_path, output_dir, epochs=1, batch_size
     model = AutoModelForCausalLM.from_pretrained(model_name)
 
     # Set the padding token
-    tokenizer.pad_token = tokenizer.eos_token  # <-- Agregar esta línea
+    tokenizer.pad_token = tokenizer.eos_token
 
     # Load and preprocess the dataset
     dataset = load_dataset("json", data_files=dataset_path, field="data")["train"]
@@ -38,30 +36,29 @@ def fine_tune_mistral(model_name, dataset_path, output_dir, epochs=1, batch_size
         output_dir=output_dir,
         num_train_epochs=epochs,
         per_device_train_batch_size=batch_size,
-        gradient_accumulation_steps=4,  # Adjust this value based on your GPU memory
+        gradient_accumulation_steps=4,
         learning_rate=learning_rate,
         logging_dir="./logs",
         logging_steps=10,
         save_steps=10,
         evaluation_strategy="no",
         report_to="none",
-        remove_unused_columns=False,  # <-- Agregar esta línea según la advertencia anterior
+        remove_unused_columns=False,
     )
 
-    # Initialize the DPO trainer
-    dpo_trainer = DPOTrainer(
+    # Initialize the Trainer
+    trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=formatted_dataset,
         tokenizer=tokenizer,
-        beta=0.1
     )
 
     # Fine-tune the model
-    dpo_trainer.train()
+    trainer.train()
 
     # Save the fine-tuned model
-    accelerator.wait_for_everyone()  # Ensure all processes are finished
+    accelerator.wait_for_everyone()
     unwrapped_model = accelerator.unwrap_model(model)
     if accelerator.is_main_process:
         unwrapped_model.save_pretrained(output_dir)
