@@ -55,9 +55,11 @@ if __name__ == "__main__":
     data_dir = os.path.join(project_dir, 'data')
     model_dir = os.path.join(project_dir, 'models')
 
-    # Set environment variables
-    os.environ['DEBUGPY_LOG_DIR'] = os.path.join(os.environ['USERPROFILE'], '.vscode', 'extensions', 'ms-python.vscode-pylance-2024.3.1')
-    os.add_dll_directory(os.path.join(os.environ['LOCALAPPDATA'], 'Packages', 'PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0', 'LocalCache', 'local-packages', 'Python312', 'site-packages', 'bitsandbytes'))
+    # Set environment variables based on the operating system
+    if os.name == 'nt':  # Windows
+        os.environ['DEBUGPY_LOG_DIR'] = os.path.join(os.environ['USERPROFILE'], '.vscode', 'extensions', 'ms-python.vscode-pylance-2024.3.1')
+    else:  # Linux and other Unix-like systems
+        os.environ['DEBUGPY_LOG_DIR'] = os.path.join(os.environ['HOME'], '.vscode', 'extensions', 'ms-python.vscode-pylance-2024.3.1')
 
     # Fine-tune the Mistral model
     fine_tune_mistral(
@@ -80,7 +82,7 @@ if __name__ == "__main__":
         r=64,
         bias="none",
         task_type="CAUSAL_LM",
-        target_modules=["q_proj", "k_proj", "v_proj", "o_proj","gate_proj"]
+        target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj"]
     )
     model = get_peft_model(model, qlora_config)
 
