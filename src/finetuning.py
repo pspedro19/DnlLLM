@@ -19,6 +19,9 @@ def fine_tune_mistral(model_name, dataset_path, output_dir, epochs=1, batch_size
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModelForCausalLM.from_pretrained(model_name)
 
+    # Set the padding token
+    tokenizer.pad_token = tokenizer.eos_token  # <-- Agregar esta línea
+
     # Load and preprocess the dataset
     dataset = load_dataset("json", data_files=dataset_path, field="data")["train"]
     formatted_dataset = dataset.map(format_dataset)
@@ -35,8 +38,8 @@ def fine_tune_mistral(model_name, dataset_path, output_dir, epochs=1, batch_size
         save_steps=10,
         evaluation_strategy="no",
         report_to="none",
+        remove_unused_columns=False,  # <-- Agregar esta línea según la advertencia anterior
     )
-
 
     # Initialize the DPO trainer
     dpo_trainer = DPOTrainer(
@@ -45,18 +48,17 @@ def fine_tune_mistral(model_name, dataset_path, output_dir, epochs=1, batch_size
         train_dataset=formatted_dataset,
         tokenizer=tokenizer,
         beta=0.1
-    # Removed the 'accelerate' parameter
-)
+    )
 
-# Fine-tune the model
+    # Fine-tune the model
     dpo_trainer.train()
 
-
-# Save the fine-tuned model
+    # Save the fine-tuned model
     accelerator.wait_for_everyone()  # Ensure all processes are finished
     unwrapped_model = accelerator.unwrap_model(model)
     if accelerator.is_main_process:
         unwrapped_model.save_pretrained(output_dir)
+
 
 
 if __name__ == "__main__":
