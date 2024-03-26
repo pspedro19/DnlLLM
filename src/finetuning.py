@@ -49,12 +49,15 @@ def fine_tune_mistral(model_name, dataset_path, output_dir, epochs=1, batch_size
     dpo_trainer.model.save_pretrained(output_dir)
 
 if __name__ == "__main__":
-    project_dir = r'C:\Users\pedro\Documents\ProyectoFinal\DnlLLM'
+    # Use relative paths
+    script_dir = os.path.dirname(os.path.realpath(__file__))
+    project_dir = os.path.join(script_dir, '..')
     data_dir = os.path.join(project_dir, 'data')
     model_dir = os.path.join(project_dir, 'models')
 
-    os.environ['DEBUGPY_LOG_DIR'] = r'c:\Users\pedro\.vscode\extensions\ms-python.vscode-pylance-2024.3.1'
-    os.add_dll_directory(r'C:\Users\pedro\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\bitsandbytes')
+    # Set environment variables
+    os.environ['DEBUGPY_LOG_DIR'] = os.path.join(os.environ['USERPROFILE'], '.vscode', 'extensions', 'ms-python.vscode-pylance-2024.3.1')
+    os.add_dll_directory(os.path.join(os.environ['LOCALAPPDATA'], 'Packages', 'PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0', 'LocalCache', 'local-packages', 'Python312', 'site-packages', 'bitsandbytes'))
 
     # Fine-tune the Mistral model
     fine_tune_mistral(
