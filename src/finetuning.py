@@ -11,11 +11,11 @@ os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
 
 
 def format_dataset(example):
-    return {
-        "prompt": example["instruccion"] + " " + example["input"],
-        "chosen": example["output"],
-        "rejected": "Respuesta incorrecta."
-    }
+    # Tokeniza el prompt y la respuesta elegida (chosen)
+    encoding = tokenizer(example["instruccion"] + " " + example["input"], truncation=True, padding="max_length", max_length=512)
+    encoding["labels"] = tokenizer(example["output"], truncation=True, padding="max_length", max_length=128)["input_ids"]
+    return encoding
+
 
 def fine_tune_mistral(model_name, dataset_path, output_dir, epochs=1, batch_size=4, learning_rate=5e-5):
     # Initialize the Accelerator
