@@ -10,12 +10,10 @@ torch.cuda.empty_cache()
 os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
 
 
-def format_dataset(example):
-    # Tokeniza el prompt y la respuesta elegida (chosen)
+def format_dataset(example, tokenizer):
     encoding = tokenizer(example["instruccion"] + " " + example["input"], truncation=True, padding="max_length", max_length=512)
     encoding["labels"] = tokenizer(example["output"], truncation=True, padding="max_length", max_length=128)["input_ids"]
     return encoding
-
 
 def fine_tune_mistral(model_name, dataset_path, output_dir, epochs=1, batch_size=4, learning_rate=5e-5):
     # Initialize the Accelerator
@@ -29,7 +27,7 @@ def fine_tune_mistral(model_name, dataset_path, output_dir, epochs=1, batch_size
 
     # Load and preprocess the dataset
     dataset = load_dataset("json", data_files=dataset_path, field="data")["train"]
-    formatted_dataset = dataset.map(format_dataset)
+    formatted_dataset = dataset.map(lambda x: format_dataset(x, tokenizer))
 
     # Define training arguments
     training_args = TrainingArguments(
@@ -63,6 +61,23 @@ def fine_tune_mistral(model_name, dataset_path, output_dir, epochs=1, batch_size
     if accelerator.is_main_process:
         unwrapped_model.save_pretrained(output_dir)
 
+    # Load the fine-tuned model
+    model = AutoModelForCausalLM.from_pretrained(os.path.join(model_dir, "fine_tuned_model"))
+
+    # Prepare the model for Qlora fine-tuning quantization
+    model = prepare_model_for_kbit_training(model)
+    qlora_config = LoraConfig(
+        lora_alpha=16,
+        lora_dropout=0.1,
+        r=64,
+        bias="none",
+        task_type="CAUSAL_LM",
+        target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj"]
+    )
+    model = get_peft_model(model, qlora_config)
+
+    # Save the model with Qlora quantization
+    model.save_pretrained(os.path.join(model_dir, "qlora_quantized_model"))
 
 
 if __name__ == "__main__":
@@ -87,21 +102,3 @@ if __name__ == "__main__":
         batch_size=8,
         learning_rate=5e-5,
     )
-
-    # Load the fine-tuned model
-    model = AutoModelForCausalLM.from_pretrained(os.path.join(model_dir, "fine_tuned_model"))
-
-    # Prepare the model for Qlora fine-tuning quantization
-    model = prepare_model_for_kbit_training(model)
-    qlora_config = LoraConfig(
-        lora_alpha=16,
-        lora_dropout=0.1,
-        r=64,
-        bias="none",
-        task_type="CAUSAL_LM",
-        target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj"]
-    )
-    model = get_peft_model(model, qlora_config)
-
-    # Save the model with Qlora quantization
-    model.save_pretrained(os.path.join(model_dir, "qlora_quantized_model"))
