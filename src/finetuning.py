@@ -44,17 +44,20 @@ def fine_tune_mistral(model_name, dataset_path, output_dir, epochs=1, batch_size
         args=training_args,
         train_dataset=formatted_dataset,
         tokenizer=tokenizer,
-        beta=0.1,
-        accelerate=accelerator,  # Pass the Accelerator to the DPOTrainer
-    )
+        beta=0.1
+    # Removed the 'accelerate' parameter
+)
 
-    # Fine-tune the model
+# Fine-tune the model
     dpo_trainer.train()
 
-    # Save the fine-tuned model
+
+# Save the fine-tuned model
     accelerator.wait_for_everyone()  # Ensure all processes are finished
+    unwrapped_model = accelerator.unwrap_model(model)
     if accelerator.is_main_process:
-        dpo_trainer.model.save_pretrained(output_dir)
+        unwrapped_model.save_pretrained(output_dir)
+
 
 if __name__ == "__main__":
     # Use relative paths
