@@ -3,6 +3,7 @@ from datasets import load_dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments
 from trl import DPOTrainer
 from peft import LoraConfig, PeftModel, prepare_model_for_kbit_training, get_peft_model
+from accelerate import Accelerator
 
 def format_dataset(example):
     return {
@@ -12,6 +13,8 @@ def format_dataset(example):
     }
 
 def fine_tune_mistral(model_name, dataset_path, output_dir, epochs=1, batch_size=8, learning_rate=5e-5):
+    # Initialize the Accelerator
+    accelerator = Accelerator()
     # Load the tokenizer and model
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModelForCausalLM.from_pretrained(model_name)
@@ -25,6 +28,7 @@ def fine_tune_mistral(model_name, dataset_path, output_dir, epochs=1, batch_size
         output_dir=output_dir,
         num_train_epochs=epochs,
         per_device_train_batch_size=batch_size,
+        gradient_accumulation_steps=4,  # Adjust this value based on your GPU memory
         learning_rate=learning_rate,
         logging_dir="./logs",
         logging_steps=10,
@@ -33,6 +37,7 @@ def fine_tune_mistral(model_name, dataset_path, output_dir, epochs=1, batch_size
         report_to="none",
     )
 
+
     # Initialize the DPO trainer
     dpo_trainer = DPOTrainer(
         model=model,
@@ -40,13 +45,16 @@ def fine_tune_mistral(model_name, dataset_path, output_dir, epochs=1, batch_size
         train_dataset=formatted_dataset,
         tokenizer=tokenizer,
         beta=0.1,
+        accelerate=accelerator,  # Pass the Accelerator to the DPOTrainer
     )
 
     # Fine-tune the model
     dpo_trainer.train()
 
     # Save the fine-tuned model
-    dpo_trainer.model.save_pretrained(output_dir)
+    accelerator.wait_for_everyone()  # Ensure all processes are finished
+    if accelerator.is_main_process:
+        dpo_trainer.model.save_pretrained(output_dir)
 
 if __name__ == "__main__":
     # Use relative paths
