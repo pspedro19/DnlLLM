@@ -36,6 +36,7 @@ def format_dataset(example, tokenizer):
 
 
 
+
 def fine_tune_mistral(model_name, dataset_path, output_dir, epochs=1, batch_size=4, learning_rate=5e-5):
     # Initialize the Accelerator
     accelerator = Accelerator()
