@@ -4,6 +4,13 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments
 from trl import DPOTrainer
 from peft import LoraConfig, PeftModel, prepare_model_for_kbit_training, get_peft_model
 from accelerate import Accelerator
+import torch
+torch.cuda.empty_cache()
+
+
+os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
+torch.cuda.empty_cache()
+
 
 def format_dataset(example):
     return {
@@ -12,7 +19,7 @@ def format_dataset(example):
         "rejected": "Respuesta incorrecta."
     }
 
-def fine_tune_mistral(model_name, dataset_path, output_dir, epochs=1, batch_size=8, learning_rate=5e-5):
+def fine_tune_mistral(model_name, dataset_path, output_dir, epochs=1, batch_size=4, learning_rate=5e-5):
     # Initialize the Accelerator
     accelerator = Accelerator()
     # Load the tokenizer and model
