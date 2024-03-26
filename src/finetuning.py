@@ -11,22 +11,28 @@ os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
 
 
 def format_dataset(example, tokenizer):
-    encoding = tokenizer(
-        example["instruccion"] + " " + example["input"],
-        truncation=True,
-        padding="max_length",
-        max_length=512,
-        return_tensors="pt"
-    )
-    labels = tokenizer(
-        example["output"],
-        truncation=True,
-        padding="max_length",
-        max_length=128,
-        return_tensors="pt"
-    )
-    encoding["labels"] = labels["input_ids"].squeeze()  # Asegúrate de eliminar la dimensión extra
-    return encoding
+    instruccion = example["instruccion"]
+    input_text = example["input"]
+    output_text = example["output"]
+
+    # Tokenizar las instrucciones
+    instruccion_encoding = tokenizer(instruccion, truncation=True, padding="max_length", max_length=512, return_tensors="pt")
+
+    # Tokenizar el texto de entrada y salida
+    input_encoding = tokenizer(input_text, truncation=True, padding="max_length", max_length=512, return_tensors="pt")
+    output_encoding = tokenizer(output_text, truncation=True, padding="max_length", max_length=128, return_tensors="pt")
+
+    # Asegurar que 'labels' sea una lista de enteros
+    labels = output_encoding["input_ids"].squeeze().tolist()
+
+    # Devolver un diccionario con las codificaciones y las etiquetas
+    return {
+        "instruccion": instruccion_encoding["input_ids"].squeeze(),
+        "input_ids": input_encoding["input_ids"].squeeze(),
+        "attention_mask": input_encoding["attention_mask"].squeeze(),
+        "labels": labels
+    }
+
 
 
 
