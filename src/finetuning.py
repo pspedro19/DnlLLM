@@ -3,26 +3,39 @@ from datasets import load_dataset
 from transformers import AutoTokenizer, AutoModelForCausalLM, TrainingArguments, Trainer
 from accelerate import Accelerator
 
-def format_dataset(example, tokenizer):
-    instruccion = example["instruccion"]
-    input_text = example["input"]
-    output_text = example["output"]
+def format_dataset(examples, tokenizer):
+    # Listas para almacenar los resultados tokenizados
+    instrucciones = []
+    inputs = []
+    outputs = []
+    attention_masks = []
+    labels = []
 
-    # Tokenizar las instrucciones, el texto de entrada y salida con truncación y padding
-    instruccion_encoding = tokenizer(instruccion, truncation=True, padding="max_length", max_length=512, return_tensors="pt")
-    input_encoding = tokenizer(input_text, truncation=True, padding="max_length", max_length=512, return_tensors="pt")
-    output_encoding = tokenizer(output_text, truncation=True, padding="max_length", max_length=128, return_tensors="pt")
+    # Iterar sobre cada ejemplo en la lista 'data'
+    for example in examples["data"]:
+        instruccion = example["instruccion"]
+        input_text = example["input"]
+        output_text = example["output"]
 
-    # Asegurar que 'labels' sea una lista de enteros y eliminar la dimensión extra
-    labels = output_encoding["input_ids"].squeeze(0).tolist()
+        # Tokenizar las instrucciones, el texto de entrada y salida con truncación y padding
+        instruccion_encoding = tokenizer(instruccion, truncation=True, padding="max_length", max_length=512)
+        input_encoding = tokenizer(input_text, truncation=True, padding="max_length", max_length=512)
+        output_encoding = tokenizer(output_text, truncation=True, padding="max_length", max_length=128)
 
-    # Devolver un diccionario con las codificaciones y las etiquetas
+        # Agregar los resultados tokenizados a las listas correspondientes
+        instrucciones.append(instruccion_encoding["input_ids"])
+        inputs.append(input_encoding["input_ids"])
+        attention_masks.append(input_encoding["attention_mask"])
+        labels.append(output_encoding["input_ids"])
+
+    # Devolver un diccionario con las listas de codificaciones y etiquetas
     return {
-        "instruccion": instruccion_encoding["input_ids"].squeeze(0),
-        "input_ids": input_encoding["input_ids"].squeeze(0),
-        "attention_mask": input_encoding["attention_mask"].squeeze(0),
+        "instruccion": instrucciones,
+        "input_ids": inputs,
+        "attention_mask": attention_masks,
         "labels": labels
     }
+
 
 
 def fine_tune_mistral(model_name, dataset_path, output_dir, epochs=1, batch_size=4, learning_rate=5e-5):
