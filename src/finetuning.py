@@ -36,8 +36,6 @@ def format_dataset(examples, tokenizer):
         "labels": labels
     }
 
-
-
 def fine_tune_mistral(model_name, dataset_path, output_dir, epochs=1, batch_size=4, learning_rate=5e-5):
     # Inicializar el Accelerator
     accelerator = Accelerator()
@@ -51,7 +49,7 @@ def fine_tune_mistral(model_name, dataset_path, output_dir, epochs=1, batch_size
 
     # Cargar y preprocesar el dataset
     dataset = load_dataset("json", data_files=dataset_path, field="data")["train"]
-    formatted_dataset = dataset.map(lambda x: format_dataset(x, tokenizer))
+    formatted_dataset = dataset.map(lambda x: format_dataset({"data": [x]}, tokenizer), batched=False)
 
     # Definir los argumentos de entrenamiento
     training_args = TrainingArguments(
