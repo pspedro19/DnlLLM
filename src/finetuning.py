@@ -1,24 +1,15 @@
 import os
 from datasets import load_dataset
-from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments, Trainer
-from trl import DPOTrainer
-from peft import LoraConfig, PeftModel, prepare_model_for_kbit_training, get_peft_model
+from transformers import AutoTokenizer, AutoModelForCausalLM, TrainingArguments, Trainer
 from accelerate import Accelerator
-import torch
-torch.cuda.empty_cache()
-
-os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
-
 
 def format_dataset(example, tokenizer):
     instruccion = example["instruccion"]
     input_text = example["input"]
     output_text = example["output"]
 
-    # Tokenizar las instrucciones
+    # Tokenizar las instrucciones, el texto de entrada y salida con truncación y padding
     instruccion_encoding = tokenizer(instruccion, truncation=True, padding="max_length", max_length=512, return_tensors="pt")
-
-    # Tokenizar el texto de entrada y salida
     input_encoding = tokenizer(input_text, truncation=True, padding="max_length", max_length=512, return_tensors="pt")
     output_encoding = tokenizer(output_text, truncation=True, padding="max_length", max_length=128, return_tensors="pt")
 
@@ -33,26 +24,22 @@ def format_dataset(example, tokenizer):
         "labels": labels
     }
 
-
-
-
-
 def fine_tune_mistral(model_name, dataset_path, output_dir, epochs=1, batch_size=4, learning_rate=5e-5):
-    # Initialize the Accelerator
+    # Inicializar el Accelerator
     accelerator = Accelerator()
-    # Load the tokenizer and model
+
+    # Cargar el tokenizador y el modelo
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModelForCausalLM.from_pretrained(model_name)
 
-    # Set the padding token
+    # Establecer el token de padding
     tokenizer.pad_token = tokenizer.eos_token
 
-    # Load and preprocess the dataset
+    # Cargar y preprocesar el dataset
     dataset = load_dataset("json", data_files=dataset_path, field="data")["train"]
     formatted_dataset = dataset.map(lambda x: format_dataset(x, tokenizer))
 
-
-    # Define training arguments
+    # Definir los argumentos de entrenamiento
     training_args = TrainingArguments(
         output_dir=output_dir,
         num_train_epochs=epochs,
@@ -65,9 +52,10 @@ def fine_tune_mistral(model_name, dataset_path, output_dir, epochs=1, batch_size
         evaluation_strategy="no",
         report_to="none",
         remove_unused_columns=False,
+        load_best_model_at_end=False,
     )
 
-    # Initialize the Trainer
+    # Inicializar el Trainer
     trainer = Trainer(
         model=model,
         args=training_args,
@@ -75,48 +63,23 @@ def fine_tune_mistral(model_name, dataset_path, output_dir, epochs=1, batch_size
         tokenizer=tokenizer,
     )
 
-    # Fine-tune the model
+    # Fine-tuning del modelo
     trainer.train()
 
-    # Save the fine-tuned model
+    # Guardar el modelo fine-tuned
     accelerator.wait_for_everyone()
     unwrapped_model = accelerator.unwrap_model(model)
     if accelerator.is_main_process:
         unwrapped_model.save_pretrained(output_dir)
 
-    # Load the fine-tuned model
-    model = AutoModelForCausalLM.from_pretrained(os.path.join(model_dir, "fine_tuned_model"))
-
-    # Prepare the model for Qlora fine-tuning quantization
-    model = prepare_model_for_kbit_training(model)
-    qlora_config = LoraConfig(
-        lora_alpha=16,
-        lora_dropout=0.1,
-        r=64,
-        bias="none",
-        task_type="CAUSAL_LM",
-        target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj"]
-    )
-    model = get_peft_model(model, qlora_config)
-
-    # Save the model with Qlora quantization
-    model.save_pretrained(os.path.join(model_dir, "qlora_quantized_model"))
-
-
 if __name__ == "__main__":
-    # Use relative paths
+    # Usar rutas relativas
     script_dir = os.path.dirname(os.path.realpath(__file__))
     project_dir = os.path.join(script_dir, '..')
     data_dir = os.path.join(project_dir, 'data')
     model_dir = os.path.join(project_dir, 'models')
 
-    # Set environment variables based on the operating system
-    if os.name == 'nt':  # Windows
-        os.environ['DEBUGPY_LOG_DIR'] = os.path.join(os.environ['USERPROFILE'], '.vscode', 'extensions', 'ms-python.vscode-pylance-2024.3.1')
-    else:  # Linux and other Unix-like systems
-        os.environ['DEBUGPY_LOG_DIR'] = os.path.join(os.environ['HOME'], '.vscode', 'extensions', 'ms-python.vscode-pylance-2024.3.1')
-
-    # Fine-tune the Mistral model
+    # Fine-tuning del modelo Mistral
     fine_tune_mistral(
         model_name="mistralai/Mistral-7B-v0.1",
         dataset_path=os.path.join(data_dir, "dataset.json"),
