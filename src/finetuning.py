@@ -13,16 +13,17 @@ def format_dataset(example, tokenizer):
     input_encoding = tokenizer(input_text, truncation=True, padding="max_length", max_length=512, return_tensors="pt")
     output_encoding = tokenizer(output_text, truncation=True, padding="max_length", max_length=128, return_tensors="pt")
 
-    # Asegurar que 'labels' sea una lista de enteros
-    labels = output_encoding["input_ids"].squeeze().tolist()
+    # Asegurar que 'labels' sea una lista de enteros y eliminar la dimensión extra
+    labels = output_encoding["input_ids"].squeeze(0).tolist()
 
     # Devolver un diccionario con las codificaciones y las etiquetas
     return {
-        "instruccion": instruccion_encoding["input_ids"].squeeze(),
-        "input_ids": input_encoding["input_ids"].squeeze(),
-        "attention_mask": input_encoding["attention_mask"].squeeze(),
+        "instruccion": instruccion_encoding["input_ids"].squeeze(0),
+        "input_ids": input_encoding["input_ids"].squeeze(0),
+        "attention_mask": input_encoding["attention_mask"].squeeze(0),
         "labels": labels
     }
+
 
 def fine_tune_mistral(model_name, dataset_path, output_dir, epochs=1, batch_size=4, learning_rate=5e-5):
     # Inicializar el Accelerator
