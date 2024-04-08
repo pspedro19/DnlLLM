@@ -16,6 +16,9 @@ transformers
 bitsandbytes
 accelerate
 wandb
+langchain-community
+
+
 
 
 
