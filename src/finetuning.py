@@ -1,13 +1,19 @@
 import os
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, TrainingArguments
+import datetime
+import warnings
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, TrainingArguments, notebook_login
 from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model
 from trl import SFTTrainer
 from datasets import load_dataset
 import torch
+import wandb
+
+# Suppress the specific UserWarning from torch.utils.checkpoint
+warnings.filterwarnings("ignore", message="torch.utils.checkpoint: please pass in use_reentrant=True or use_reentrant=False explicitly.")
 
 def load_model_and_tokenizer(model_name, bnb_config):
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    tokenizer.pad_token = tokenizer.eos_token  # Set the padding token to be the same as the EOS token
+    tokenizer.pad_token = tokenizer.eos_token
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
         quantization_config=bnb_config,
@@ -16,7 +22,6 @@ def load_model_and_tokenizer(model_name, bnb_config):
         trust_remote_code=True,
     )
     return model, tokenizer
-
 
 def add_adopter_to_model(model):
     model = prepare_model_for_kbit_training(model)
@@ -31,9 +36,9 @@ def add_adopter_to_model(model):
     model = get_peft_model(model, peft_config)
     return model, peft_config
 
-def set_hyperparameters():
+def set_hyperparameters(output_dir):
     training_arguments = TrainingArguments(
-        output_dir="./results",
+        output_dir=output_dir,
         num_train_epochs=1,
         per_device_train_batch_size=4,
         gradient_accumulation_steps=1,
@@ -49,17 +54,18 @@ def set_hyperparameters():
         warmup_ratio=0.03,
         group_by_length=True,
         lr_scheduler_type="constant",
-        #report_to="wandb"
+        report_to="wandb",
     )
     return training_arguments
 
 def train_model(model, dataset, peft_config, tokenizer, training_arguments):
-    tokenizer.padding_side = 'right'  # Ensure the padding side is set to 'right'
+    tokenizer.padding_side = 'right'
+    model.config.use_cache = False
     trainer = SFTTrainer(
         model=model,
         train_dataset=dataset,
         peft_config=peft_config,
-        max_seq_length=1024,  # Set the max sequence length
+        max_seq_length=1024,
         dataset_text_field="text",
         tokenizer=tokenizer,
         args=training_arguments,
@@ -68,13 +74,17 @@ def train_model(model, dataset, peft_config, tokenizer, training_arguments):
     trainer.train()
     return trainer
 
-
 def save_and_push_model(trainer, new_model_name):
-    model_dir = os.path.join("..", "models", new_model_name)
-    trainer.model.save_pretrained(model_dir)
-    trainer.model.push_to_hub(new_model_name, use_temp_dir=False)
+    trainer.model.save_pretrained(new_model_name)
+    trainer.model.push_to_hub(new_model_name)
 
 def main():
+    # Log in to Hugging Face
+    notebook_login()
+    
+    # Initialize Weights & Biases
+    wandb.init(project="mistral_fine_tuning")
+
     model_name = "mistralai/Mistral-7B-v0.1"
     dataset_name = "mlabonne/guanaco-llama2-1k"
     new_model_name = "mistral_7b_guanaco"
@@ -83,12 +93,28 @@ def main():
         bnb_4bit_use_double_quant=True,
     )
 
+    # Create a unique output directory based on the current timestamp
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_dir = os.path.join("results", timestamp)
+
     model, tokenizer = load_model_and_tokenizer(model_name, bnb_config)
     model, peft_config = add_adopter_to_model(model)
-    training_arguments = set_hyperparameters()
+    training_arguments = set_hyperparameters(output_dir)
     dataset = load_dataset(dataset_name, split="train")
     trainer = train_model(model, dataset, peft_config, tokenizer, training_arguments)
+
+    # Evaluate the model
+    eval_results = trainer.evaluate()
+    print("Evaluation results:", eval_results)
+
+    # Log evaluation results to Weights & Biases
+    wandb.log(eval_results)
+
+    # Save and push the model to Hugging Face Hub
     save_and_push_model(trainer, new_model_name)
+
+    # Finish the Weights & Biases run
+    wandb.finish()
 
 if __name__ == "__main__":
     main()
