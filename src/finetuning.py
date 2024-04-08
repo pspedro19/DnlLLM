@@ -1,5 +1,5 @@
 import os
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, pipeline, TrainingArguments
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, TrainingArguments
 from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model
 from trl import SFTTrainer
 from datasets import load_dataset
@@ -72,8 +72,7 @@ def save_and_push_model(trainer, new_model_name):
     trainer.model.push_to_hub(new_model_name, use_temp_dir=False)
 
 def main():
-    # Set up
-    model_name = os.path.join("..", "models", "mistral", "pytorch", "7b-v0.1-hf", "1")
+    model_name = "mistralai/Mistral-7B-v0.1"
     dataset_name = "mlabonne/guanaco-llama2-1k"
     new_model_name = "mistral_7b_guanaco"
     bnb_config = BitsAndBytesConfig(
@@ -82,25 +81,12 @@ def main():
         bnb_4bit_use_double_quant=True,
     )
 
-    # Load model and tokenizer
     model, tokenizer = load_model_and_tokenizer(model_name, bnb_config)
-
-    # Add adopter to the model
     model, peft_config = add_adopter_to_model(model)
-
-    # Set hyperparameters
     training_arguments = set_hyperparameters()
-
-    # Load dataset
     dataset = load_dataset(dataset_name, split="train")
-
-    # Train model
     trainer = train_model(model, dataset, peft_config, tokenizer, training_arguments)
-
-    # Save and push model
     save_and_push_model(trainer, new_model_name)
-
-    # Evaluation and inference can be performed as needed
 
 if __name__ == "__main__":
     main()
