@@ -1,6 +1,6 @@
 import os
 from langchain_community.llms import HuggingFace
-from langchain.llms import HuggingFace
+#from langchain.llms import HuggingFace
 from langchain.prompts import Prompt
 from memory import VectorMemory
 
