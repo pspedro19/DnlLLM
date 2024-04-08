@@ -1,7 +1,7 @@
 import os
 import datetime
 import warnings
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, TrainingArguments, notebook_login
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, TrainingArguments
 from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model
 from trl import SFTTrainer
 from datasets import load_dataset
@@ -79,9 +79,6 @@ def save_and_push_model(trainer, new_model_name):
     trainer.model.push_to_hub(new_model_name)
 
 def main():
-    # Log in to Hugging Face
-    notebook_login()
-    
     # Initialize Weights & Biases
     wandb.init(project="mistral_fine_tuning")
 
