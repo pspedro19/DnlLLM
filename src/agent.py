@@ -2,6 +2,7 @@ import os
 from langchain_community.llms import LangChainAgent
 from langchain.prompts import Prompt
 from memory import VectorMemory
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 # Define paths
 data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data')
@@ -10,8 +11,15 @@ data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data'
 memory_file = os.path.join(data_dir, 'memory.json')
 memory = VectorMemory(memory_file)
 
+# Define the path to the locally saved model
+model_path = "../mistral_7b_guanaco"
+
+# Load the model and tokenizer
+model = AutoModelForCausalLM.from_pretrained(model_path)
+tokenizer = AutoTokenizer.from_pretrained(model_path)
+
 # Initialize LangChain agent with the fine-tuned model
-llm = HuggingFace(model_name="../mistral_7b_guanaco")
+llm = HuggingFace(model=model, tokenizer=tokenizer)
 agent = LangChainAgent(llm=llm)
 
 # Define prompt for sales interaction
