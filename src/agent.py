@@ -1,5 +1,5 @@
 import os
-from langchain.llms import LangChainAgent
+from langchain_community.llms import LangChainAgent
 from langchain.prompts import Prompt
 from memory import VectorMemory
 
