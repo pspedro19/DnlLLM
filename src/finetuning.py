@@ -7,6 +7,7 @@ import torch
 
 def load_model_and_tokenizer(model_name, bnb_config):
     tokenizer = AutoTokenizer.from_pretrained(model_name)
+    tokenizer.pad_token = tokenizer.eos_token  # Set the padding token to be the same as the EOS token
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
         quantization_config=bnb_config,
@@ -15,6 +16,7 @@ def load_model_and_tokenizer(model_name, bnb_config):
         trust_remote_code=True,
     )
     return model, tokenizer
+
 
 def add_adopter_to_model(model):
     model = prepare_model_for_kbit_training(model)
@@ -52,11 +54,12 @@ def set_hyperparameters():
     return training_arguments
 
 def train_model(model, dataset, peft_config, tokenizer, training_arguments):
+    tokenizer.padding_side = 'right'  # Ensure the padding side is set to 'right'
     trainer = SFTTrainer(
         model=model,
         train_dataset=dataset,
         peft_config=peft_config,
-        max_seq_length=None,
+        max_seq_length=1024,  # Set the max sequence length
         dataset_text_field="text",
         tokenizer=tokenizer,
         args=training_arguments,
@@ -64,6 +67,7 @@ def train_model(model, dataset, peft_config, tokenizer, training_arguments):
     )
     trainer.train()
     return trainer
+
 
 def save_and_push_model(trainer, new_model_name):
     model_dir = os.path.join("..", "models", new_model_name)
