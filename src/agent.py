@@ -1,6 +1,5 @@
 import os
-from langchain_community.llms import HuggingFace
-#from langchain.llms import HuggingFace
+from langchain.llms import LangChainAgent
 from langchain.prompts import Prompt
 from memory import VectorMemory
 
@@ -11,7 +10,6 @@ data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data'
 memory_file = os.path.join(data_dir, 'memory.json')
 memory = VectorMemory(memory_file)
 
-# Initialize LangChain agent with the fine-tuned model
 # Initialize LangChain agent with the fine-tuned model
 llm = HuggingFace(model_name="../mistral_7b_guanaco")
 agent = LangChainAgent(llm=llm)
