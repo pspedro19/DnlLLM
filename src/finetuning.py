@@ -58,12 +58,13 @@ def set_hyperparameters(output_dir):
     )
     return training_arguments
 
-def train_model(model, dataset, peft_config, tokenizer, training_arguments):
+def train_model(model, train_dataset, eval_dataset, peft_config, tokenizer, training_arguments):
     tokenizer.padding_side = 'right'
     model.config.use_cache = False
     trainer = SFTTrainer(
         model=model,
-        train_dataset=dataset,
+        train_dataset=train_dataset,
+        eval_dataset=eval_dataset,
         peft_config=peft_config,
         max_seq_length=1024,
         dataset_text_field="text",
@@ -94,11 +95,15 @@ def main():
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     output_dir = os.path.join("results", timestamp)
 
+    # Load and split the dataset
+    dataset = load_dataset(dataset_name, split="train")
+    train_dataset = dataset.train_test_split(test_size=0.1)["train"]
+    eval_dataset = dataset.train_test_split(test_size=0.1)["test"]
+
     model, tokenizer = load_model_and_tokenizer(model_name, bnb_config)
     model, peft_config = add_adopter_to_model(model)
     training_arguments = set_hyperparameters(output_dir)
-    dataset = load_dataset(dataset_name, split="train")
-    trainer = train_model(model, dataset, peft_config, tokenizer, training_arguments)
+    trainer = train_model(model, train_dataset, eval_dataset, peft_config, tokenizer, training_arguments)
 
     # Evaluate the model
     eval_results = trainer.evaluate()
