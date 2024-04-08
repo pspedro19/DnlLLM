@@ -1,6 +1,6 @@
 import os
 import asyncio
-from langchain_community import LangChainAgent, HuggingFace
+from langchain_community import LangChainAgent, HuggingFace  # Check if LangChainAgent can be imported
 from langchain.prompts import Prompt
 from memory import VectorMemory
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -8,6 +8,7 @@ from langchain.agents import tool, AgentExecutor, format_to_openai_tool_messages
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.pydantic_v1 import BaseModel, Field
+from typing import List  # Added import for List
 import json
 
 # Define a response schema
