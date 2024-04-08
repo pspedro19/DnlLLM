@@ -9,7 +9,6 @@ def load_model_and_tokenizer(model_name, bnb_config):
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
-        load_in_4bit=True,
         quantization_config=bnb_config,
         torch_dtype=torch.bfloat16,
         device_map="auto",
@@ -76,7 +75,6 @@ def main():
     dataset_name = "mlabonne/guanaco-llama2-1k"
     new_model_name = "mistral_7b_guanaco"
     bnb_config = BitsAndBytesConfig(
-        load_in_4bit=True,
         bnb_4bit_quant_type="nf4",
         bnb_4bit_use_double_quant=True,
     )
