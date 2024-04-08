@@ -47,7 +47,7 @@ def set_hyperparameters():
         warmup_ratio=0.03,
         group_by_length=True,
         lr_scheduler_type="constant",
-        report_to="wandb"
+        #report_to="wandb"
     )
     return training_arguments
 
