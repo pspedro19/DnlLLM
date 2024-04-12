@@ -5,7 +5,6 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model
 from trl import SFTTrainer
 from datasets import load_dataset
-from accelerate import DataLoaderConfiguration
 import torch
 import wandb
 
@@ -60,13 +59,6 @@ def set_hyperparameters(output_dir):
     return training_arguments
 
 def train_model(model, train_dataset, eval_dataset, peft_config, tokenizer, training_arguments):
-    dataloader_config = DataLoaderConfiguration(
-        dispatch_batches=None,
-        split_batches=False,
-        even_batches=True,
-        use_seedable_sampler=True
-    )
-
     tokenizer.padding_side = 'right'
     model.config.use_cache = False
     trainer = SFTTrainer(
@@ -78,8 +70,7 @@ def train_model(model, train_dataset, eval_dataset, peft_config, tokenizer, trai
         dataset_text_field="text",
         tokenizer=tokenizer,
         args=training_arguments,
-        packing=False,
-        dataloader_config=dataloader_config
+        packing=False
     )
     trainer.train()
     return trainer
@@ -114,7 +105,7 @@ def main():
     try:
         model, tokenizer = load_model_and_tokenizer(model_name, bnb_config)
         model, peft_config = add_adopter_to_model(model)
-        training_arguments =set_hyperparameters(output_dir)
+        training_arguments = set_hyperparameters(output_dir)
         trainer = train_model(model, train_dataset, eval_dataset, peft_config, tokenizer, training_arguments)
         eval_results = trainer.evaluate()
         print("Evaluation results:", eval_results)
