@@ -43,8 +43,10 @@ class SalesAgent:
             print("Assistant:", response)
 
 if __name__ == "__main__":
-    model_path = "../model/mistral_7b_guanaco"
+    # Ensure the path below is the actual path to your fine-tuned model directory
+    fine_tuned_model_path = "path_to_your_fine_tuned_model_directory"  # e.g., "results/20230412_153045/DnlModel"
     memory_path = "../data/memory.json"
     openai_api_key = "your-api-key"
-    agent = SalesAgent(model_path, openai_api_key, memory_file=memory_path)
+
+    agent = SalesAgent(fine_tuned_model_path, openai_api_key, memory_file=memory_path)
     asyncio.run(agent.run())
