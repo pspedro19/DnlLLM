@@ -1,15 +1,18 @@
 import asyncio
-from transformers import AutoModelForCausalLM, AutoTokenizer, AdapterConfig
+from transformers import AutoModelForCausalLM, AutoTokenizer
 from memory import EnhancedVectorMemory  # Ensure this module is correctly implemented
 from langchain.llms import OpenAI, LLMChain
 from langchain.prompts import PromptTemplate
 
 class SalesAgent:
     def __init__(self, model_path, adapter_path, openai_api_key, memory_file="memory.json", max_execution_time=10):
-        # Load the model with the adapter
+        # Load the model
         self.hf_model = AutoModelForCausalLM.from_pretrained(model_path)
-        adapter_config = AdapterConfig.load(adapter_path + '/adapter_config.json')
-        self.hf_model.load_adapter(adapter_path + '/adapter_model.safetensors', config=adapter_config)
+
+        # Assuming the adapter is saved in the model directory and automatically loaded
+        # If not, you would manually add and load the adapter as follows:
+        # self.hf_model.add_adapter("adapter_name")
+        # self.hf_model.load_adapter(f"{adapter_path}/adapter_name")
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
 
