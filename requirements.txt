@@ -5,12 +5,12 @@ scikit-learn
 pandas
 langchain
 regex
-trl
+trl==0.8.2
 peft
 accelerate
 safetensors>=0.4.1
 sentence-transformers==2.2.0
-datasets==1.18.3
+datasets==2.18.0
 torch==2.2.1
 transformers
 bitsandbytes
