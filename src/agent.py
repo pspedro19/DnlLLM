@@ -1,32 +1,21 @@
 import asyncio
 from transformers import AutoModelForCausalLM, AutoTokenizer
-
-# Ensure necessary libraries are installed
-try:
-    from sentence_transformers import SentenceTransformer  # Checks if sentence_transformers is installed
-except ImportError:
-    print("sentence_transformers is not installed. Install it using: pip install sentence_transformers")
+from sentence_transformers import SentenceTransformer
 
 try:
-    from langchain_community.llms import OpenAI  # Updated imports
+    from langchain_community.llms import OpenAI
     from langchain_community.chains import LLMChain
     from langchain_community.prompts import PromptTemplate
 except ImportError:
     print("langchain-community is not installed. Install it using: pip install -U langchain-community")
 
-# Custom module, implement error handling inside the module or here if the module does not exist.
-try:
-    from memory import EnhancedVectorMemory
-except ImportError as e:
-    print(f"Failed to import custom memory module: {e}")
-    print("Ensure your custom 'memory' module is correctly implemented and accessible.")
+from memory import EnhancedVectorMemory
 
 class SalesAgent:
     def __init__(self, model_path, adapter_path, openai_api_key, memory_file="memory.json", max_execution_time=10):
-        # Load the model including its adapter
         try:
             self.hf_model = AutoModelForCausalLM.from_pretrained(model_path)
-            self.hf_model.load_adapter(adapter_path)  # Load the adapter
+            self.hf_model.load_adapter(adapter_path)
         except Exception as e:
             print(f"Error loading model or adapter: {e}")
             return
@@ -64,10 +53,9 @@ class SalesAgent:
 
 if __name__ == "__main__":
     model_checkpoint_path = "/DnlLLM/src/results/20240412_211227/checkpoint-200"
-    adapter_path = "/DnlLLM/src/mistral_7b_guanaco/adapter"
+    adapter_path = "/DnlLLM/src/mistral_7b_guanaco"
     memory_path = "../data/memory.json"
     openai_api_key = "your-api-key"
     
-    # Create the SalesAgent instance and start it
     agent = SalesAgent(model_checkpoint_path, adapter_path, openai_api_key, memory_file=memory_path)
     asyncio.run(agent.run())
