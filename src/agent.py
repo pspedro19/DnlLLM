@@ -1,21 +1,28 @@
 import asyncio
 from transformers import AutoModelForCausalLM, AutoTokenizer
-from memory import EnhancedVectorMemory  # Ensure this module is correctly implemented
+
+# Attempt to import necessary custom modules
+try:
+    from memory import EnhancedVectorMemory
+except ImportError as e:
+    print(f"Failed to import custom memory module: {e}")
+    print("Ensure your custom 'memory' module is correctly implemented and accessible.")
+
 from langchain.llms import OpenAI, LLMChain
 from langchain.prompts import PromptTemplate
 
 class SalesAgent:
     def __init__(self, model_path, adapter_path, openai_api_key, memory_file="memory.json", max_execution_time=10):
-        # Load the model
-        self.hf_model = AutoModelForCausalLM.from_pretrained(model_path)
-
-        # Assuming the adapter is saved in the model directory and automatically loaded
-        # If not, you would manually add and load the adapter as follows:
-        # self.hf_model.add_adapter("adapter_name")
-        # self.hf_model.load_adapter(f"{adapter_path}/adapter_name")
-
+        # Load the model including its adapter
+        try:
+            self.hf_model = AutoModelForCausalLM.from_pretrained(model_path)
+            # Load adapter if it's separate
+            self.hf_model.load_adapter(adapter_path)
+        except Exception as e:
+            print(f"Error loading model or adapter: {e}")
+            return
+        
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
-
         self.openai_model = OpenAI(api_key=openai_api_key)
         self.memory = EnhancedVectorMemory(memory_file)
         self.prompt_template = PromptTemplate(
@@ -33,7 +40,6 @@ class SalesAgent:
         response_openai = await asyncio.wait_for(self.openai_agent.run({"input": enhanced_input}), timeout=self.max_execution_time)
         
         final_response = response_openai if len(response_openai) < len(response_hf) else response_hf
-        
         self.memory.add_to_memory("conversation", {"query": user_input, "response": final_response})
         
         return final_response
@@ -48,8 +54,10 @@ class SalesAgent:
 
 if __name__ == "__main__":
     model_checkpoint_path = "/DnlLLM/src/results/20240412_211227/checkpoint-200"
-    adapter_path = "/DnlLLM/src/mistral_7b_guanaco"
+    adapter_path = "/DnlLLM/src/mistral_7b_guanaco/adapter"
     memory_path = "../data/memory.json"
     openai_api_key = "your-api-key"
+    
+    # Create the SalesAgent instance and start it
     agent = SalesAgent(model_checkpoint_path, adapter_path, openai_api_key, memory_file=memory_path)
     asyncio.run(agent.run())
