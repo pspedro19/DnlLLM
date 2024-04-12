@@ -15,9 +15,9 @@ class SimpleLLM:
 
 # Definición de la clase SalesAgent para manejar las interacciones con el usuario
 class SalesAgent:
-    def __init__(self, model_checkpoint_path, adapter_path, openai_api_key, memory_file="memory.json", max_execution_time=10):
+    def __init__(self, model_checkpoint_path, openai_api_key, memory_file="memory.json", max_execution_time=10):
         # Carga del modelo y el tokenizer
-        self.hf_model = AutoModelForCausalLM.from_pretrained(model_checkpoint_path, adapter_path=adapter_path)
+        self.hf_model = AutoModelForCausalLM.from_pretrained(model_checkpoint_path)
         self.tokenizer = AutoTokenizer.from_pretrained(model_checkpoint_path)
         self.simple_llm = SimpleLLM(self.hf_model, self.tokenizer)
         self.openai_model = OpenAI(api_key=openai_api_key)
@@ -52,10 +52,9 @@ class SalesAgent:
 if __name__ == "__main__":
     # Rutas de los archivos y parámetros necesarios
     model_checkpoint_path = "/DnlLLM/src/results/20240412_211227/checkpoint-225"
-    adapter_path = "/DnlLLM/src/mistral_7b_guanaco/adapter_config.json"
     memory_path = "../data/memory.json"
     openai_api_key = "your-api-key"
 
     # Creación de una instancia de SalesAgent y ejecución del bucle principal
-    agent = SalesAgent(model_checkpoint_path, adapter_path, openai_api_key, memory_file=memory_path)
+    agent = SalesAgent(model_checkpoint_path, openai_api_key, memory_file=memory_path)
     asyncio.run(agent.run())
