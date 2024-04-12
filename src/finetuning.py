@@ -60,7 +60,6 @@ def set_hyperparameters(output_dir):
     return training_arguments
 
 def train_model(model, train_dataset, eval_dataset, peft_config, tokenizer, training_arguments):
-    # Configure DataLoader using DataLoaderConfiguration from accelerate
     dataloader_config = DataLoaderConfiguration(
         dispatch_batches=None,
         split_batches=False,
@@ -80,52 +79,50 @@ def train_model(model, train_dataset, eval_dataset, peft_config, tokenizer, trai
         tokenizer=tokenizer,
         args=training_arguments,
         packing=False,
-        dataloader_config=dataloader_config  # Apply dataloader_config
+        dataloader_config=dataloader_config
     )
     trainer.train()
     return trainer
 
-def save_and_push_model(trainer, new_model_name):
-    trainer.model.save_pretrained(new_model_name)
-    trainer.model.push_to_hub(new_model_name)
+def save_and_push_model(trainer, new_model_name, hf_token):
+    try:
+        from huggingface_hub import HfFolder
+        HfFolder.save_token(hf_token)
+        trainer.model.save_pretrained(new_model_name)
+        trainer.model.push_to_hub(new_model_name)
+    except Exception as e:
+        print(f"Failed to save or push model: {e}")
 
 def main():
-    # Initialize Weights & Biases
-    wandb.init(project="mistral_fine_tuning")
+    hf_token = input("Enter your Hugging Face token: ")
+    wb_token = input("Enter your Weights & Biases token: ")
+    wandb.login(key=wb_token)
 
     model_name = "mistralai/Mistral-7B-v0.1"
     dataset_name = "mlabonne/guanaco-llama2-1k"
-    new_model_name = "mistral_7b_guanaco"
+    new_model_name = "DnlModel"
     bnb_config = BitsAndBytesConfig(
         bnb_4bit_quant_type="nf4",
         bnb_4bit_use_double_quant=True,
     )
-
-    # Create a unique output directory based on the current timestamp
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     output_dir = os.path.join("results", timestamp)
-
-    # Load and split the dataset
     dataset = load_dataset(dataset_name, split="train")
     train_dataset = dataset.train_test_split(test_size=0.1)["train"]
     eval_dataset = dataset.train_test_split(test_size=0.1)["test"]
 
-    model, tokenizer = load_model_and_tokenizer(model_name, bnb_config)
-    model, peft_config = add_adopter_to_model(model)
-    training_arguments = set_hyperparameters(output_dir)
-    trainer = train_model(model, train_dataset, eval_dataset, peft_config, tokenizer, training_arguments)
+    try:
+        model, tokenizer = load_model_and_tokenizer(model_name, bnb_config)
+        model, peft_config = add_adopter_to_model(model)
+        training_arguments =set_hyperparameters(output_dir)
+        trainer = train_model(model, train_dataset, eval_dataset, peft_config, tokenizer, training_arguments)
+        eval_results = trainer.evaluate()
+        print("Evaluation results:", eval_results)
+        wandb.log(eval_results)
+        save_and_push_model(trainer, new_model_name, hf_token)
+    except Exception as e:
+        print(f"An error occurred during training or evaluation: {e}")
 
-    # Evaluate the model
-    eval_results = trainer.evaluate()
-    print("Evaluation results:", eval_results)
-
-    # Log evaluation results to Weeights & Biases
-    wandb.log(eval_results)
-
-    # Save and push the model to Hugging Face Hub
-    save_and_push_model(trainer, new_model_name)
-
-    # Finish the Weights & Biases run
     wandb.finish()
 
 if __name__ == "__main__":
