@@ -9,19 +9,26 @@ class SimpleLLM:
 
     async def run(self, input_text):
         input_ids = self.tokenizer(input_text, return_tensors="pt")["input_ids"]
-        output = self.model.generate(input_ids, max_length=50, num_return_sequences=1, no_repeat_ngram_size=2, early_stopping=True)
+        output = self.model.generate(
+            input_ids,
+            max_length=50,
+            num_return_sequences=1,
+            no_repeat_ngram_size=2,
+            early_stopping=False,  # Disable early stopping
+            pad_token_id=self.tokenizer.eos_token_id
+        )
         decoded_output = self.tokenizer.decode(output[0], skip_special_tokens=True)
         return decoded_output
 
 # Definición de la clase SalesAgent para manejar las interacciones con el usuario
 class SalesAgent:
-    def __init__(self, model_checkpoint_path, openai_api_key, memory_file="memory.json", max_execution_time=10):
+    def __init__(self, model_checkpoint_path, memory_file="memory.json", max_execution_time=10):
         # Carga del modelo y el tokenizer
         self.hf_model = AutoModelForCausalLM.from_pretrained(model_checkpoint_path)
         self.tokenizer = AutoTokenizer.from_pretrained(model_checkpoint_path)
         self.simple_llm = SimpleLLM(self.hf_model, self.tokenizer)
-        self.openai_model = OpenAI(api_key=openai_api_key)
-        self.memory = EnhancedVectorMemory(memory_file) if 'EnhancedVectorMemory' in globals() else None
+        #self.memory = EnhancedVectorMemory(memory_file) if 'EnhancedVectorMemory' in globals() else None
+        self.memory = None
         self.max_execution_time = max_execution_time
 
     async def handle_query(self, user_input):
@@ -31,16 +38,20 @@ class SalesAgent:
 
         # Generación de respuestas usando el modelo HF y el modelo OpenAI
         response_hf = await asyncio.wait_for(self.simple_llm.run(enhanced_input), timeout=self.max_execution_time)
-        response_openai = await asyncio.wait_for(self.openai_model.run({"input": enhanced_input}), timeout=self.max_execution_time)
+        #response_openai = await asyncio.wait_for(self.openai_model.run({"input": enhanced_input}), timeout=self.max_execution_time)
 
         # Selección de la respuesta más corta como final
-        final_response = response_openai if len(response_openai) < len(response_hf) else response_hf
+        #final_response = response_openai if len(response_openai) < len(response_hf) else response_hf
+        final_response = response_hf
         if self.memory:
             self.memory.add_to_memory("conversation", {"query": user_input, "response": final_response})
 
         return final_response
 
     async def run(self):
+        # Solicitar la API key al usuario
+        #openai_api_key = input("Please enter your OpenAI API key: ")
+
         # Bucle principal para interactuar con el usuario
         while True:
             user_input = input("You: ")
@@ -53,8 +64,7 @@ if __name__ == "__main__":
     # Rutas de los archivos y parámetros necesarios
     model_checkpoint_path = "/DnlLLM/src/results/20240412_211227/checkpoint-225"
     memory_path = "../data/memory.json"
-    openai_api_key = "your-api-key"
 
     # Creación de una instancia de SalesAgent y ejecución del bucle principal
-    agent = SalesAgent(model_checkpoint_path, openai_api_key, memory_file=memory_path)
+    agent = SalesAgent(model_checkpoint_path, memory_file=memory_path)
     asyncio.run(agent.run())

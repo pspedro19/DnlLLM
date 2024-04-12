@@ -19,6 +19,8 @@ accelerate
 wandb
 langchain-community
 huggingface_hub
+openai
+
 
 
 
