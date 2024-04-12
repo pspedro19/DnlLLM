@@ -4,6 +4,7 @@ from langchain_community.llms import OpenAI
 from langchain_community.chains import LLMChain
 from langchain_community.prompts import PromptTemplate
 
+
 from memory import EnhancedVectorMemory  # Assuming this is a custom class you've implemented
 
 class SalesAgent:
