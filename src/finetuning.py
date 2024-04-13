@@ -99,11 +99,11 @@ def save_and_push_model(trainer, model_name, output_dir, hf_token):
     except Exception as e:
         print(f"Failed to save or push model: {e}")
 
+
 def main():
     hf_token = input("Enter your Hugging Face token: ")
     wb_token = input("Enter your Weights & Biases token: ")
     wandb.login(key=wb_token)
-    wandb.init(project="Model Training", entity="your_wandb_entity")
 
     model_name = "mistralai/Mistral-7B-v0.1"
     dataset_name = "mlabonne/guanaco-llama2-1k"
@@ -127,7 +127,11 @@ def main():
         trainer = train_model(model, train_dataset, eval_dataset, peft_config, tokenizer, training_arguments)
         eval_results = trainer.evaluate()
         print("Evaluation results:", eval_results)
+
+        # Initialize W&B project without specifying the entity
+        wandb.init(project="Model Training")
         wandb.log(eval_results)
+
         save_and_push_model(trainer, new_model_name, output_dir, hf_token)
     except Exception as e:
         print(f"An error occurred during training or evaluation: {e}")
