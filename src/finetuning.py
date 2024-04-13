@@ -89,20 +89,26 @@ def save_and_push_model(trainer, model_name, output_dir, hf_token):
     trainer.tokenizer.save_pretrained(model_path)  # Save the tokenizer
     trainer.save_state()  # Save optimizer, scheduler, and trainer state
     trainer.args.to_json_file(os.path.join(model_path, "training_args.json"))  # Save training arguments
-    
 
-    # Optional: Save custom files like README or adapter configs if needed
+    # Save additional tokenizer files if they are not automatically saved
+    additional_files = ['special_tokens_map.json', 'tokenizer.json', 'tokenizer.model', 'tokenizer_config.json']
+    for file_name in additional_files:
+        src_path = os.path.join(output_dir, file_name)
+        if os.path.exists(src_path):
+            shutil.copy(src_path, model_path)
+
+    # Save custom files like README or adapter configs if needed
     with open(os.path.join(model_path, "README.md"), "w") as f:
         f.write("Model and tokenizer trained with custom training loop.")
 
-    # If using model adapters and want to save adapter-specific configurations
     if hasattr(trainer.model.config, "adapter_config"):
         with open(os.path.join(model_path, "adapter_config.json"), "w") as f:
             f.write(trainer.model.config.adapter_config.to_json_string())
 
     # Copy safetensors if exists
-    if os.path.exists("path/to/local/safetensors"):
-        shutil.copy("path/to/local/safetensors", os.path.join(model_path, "adapter_model.safetensors"))
+    safetensor_path = os.path.join(output_dir, "adapter_model.safetensors")
+    if os.path.exists(safetensor_path):
+        shutil.copy(safetensor_path, model_path)
 
     try:
         HfFolder.save_token(hf_token)
