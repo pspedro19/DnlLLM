@@ -30,7 +30,6 @@ class SimpleLLM:
         return decoded_output
 
 async def run_sales_agent(llm, memory):
-    sales_context = "As a sales agent, I am here to help you find the best products and offers."  # Persistent role context
     print("Welcome! You're chatting with DNL Agent. How may I assist you today?")
     while True:
         user_input = input("You: ")
@@ -38,10 +37,11 @@ async def run_sales_agent(llm, memory):
             print("DNL Agent: It was a pleasure assisting you. Goodbye!")
             break
         memory_context = memory.get_closest_memory(user_input)
-        enhanced_input = f"{sales_context} {memory_context} {user_input}" if memory_context else f"{sales_context} {user_input}"
+        enhanced_input = f"{memory_context} {user_input}" if memory_context else user_input
         response = await llm.generate_text(enhanced_input)
         memory.add_to_memory(f"context_{len(memory.memory) + 1}", enhanced_input)  # Using add_to_memory method
         print("DNL Agent:", response)
+
 
 if __name__ == "__main__":
     tokenizer_checkpoint_path = "/DnlLLM/src/DnlModel/DnlModel"
