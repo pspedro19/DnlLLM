@@ -45,13 +45,15 @@ class SimpleLLM:
         actual_model = self.model.module if isinstance(self.model, torch.nn.DataParallel) else self.model
 
         output = actual_model.generate(
-            input_ids,
-            max_length=50,
-            num_return_sequences=1,
-            no_repeat_ngram_size=2,
-            pad_token_id=self.tokenizer.eos_token_id,
-            early_stopping=True
+             input_ids,
+             max_length=50,
+             num_return_sequences=1,
+             no_repeat_ngram_size=2,
+             pad_token_id=self.tokenizer.eos_token_id,
+             num_beams=3,  # Using more than one beam
+             early_stopping=True
         )
+
         decoded_output = self.tokenizer.decode(output[0], skip_special_tokens=True)
         return decoded_output
 
