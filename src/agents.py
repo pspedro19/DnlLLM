@@ -1,4 +1,4 @@
-# memory.py needs to be accessible from this script, ensure it's in the same directory or adjust the import path
+# Ensure memory.py is accessible from this script, adjust the import path as needed
 from memory import EnhancedVectorMemory
 
 import asyncio
@@ -14,16 +14,16 @@ class SimpleLLM:
     async def generate_text(self, input_text):
         input_ids = self.tokenizer.encode(input_text, return_tensors="pt", truncation=True, max_length=1024)
         if torch.cuda.is_available():
-            input_ids = input_ids.to('cuda')
+            input_ids = input_ids.cuda()
 
-        actual_model = self.model.module if isinstance(self.model, torch.nn.DataParallel) else self.model
+        actual_model = self.model.module if isinstance(self.model, DataParallel) else self.model
         output = actual_model.generate(
             input_ids,
-            max_new_tokens=30,  # Specifies the number of new tokens to generate
+            max_new_tokens=30,
             num_return_sequences=1,
             no_repeat_ngram_size=2,
             pad_token_id=self.tokenizer.eos_token_id,
-            num_beams=3,  # Using more than one beam
+            num_beams=3,
             early_stopping=True
         )
         decoded_output = self.tokenizer.decode(output[0], skip_special_tokens=True)
@@ -36,12 +36,11 @@ async def run_sales_agent(llm, memory):
         if user_input.lower() == "exit":
             print("DNL Agent: It was a pleasure assisting you. Goodbye!")
             break
-        memory_context = memory.get_closest_memory(user_input)
-        enhanced_input = f"{memory_context} {user_input}" if memory_context else user_input
+        memory_response = await memory.get_closest_memory(user_input)
+        enhanced_input = f"{memory_response} {user_input}" if memory_response else user_input
         response = await llm.generate_text(enhanced_input)
-        memory.add_to_memory(f"context_{len(memory.memory) + 1}", enhanced_input)  # Using add_to_memory method
+        await memory.add_to_memory(user_input, response)  # Save interaction to memory
         print("DNL Agent:", response)
-
 
 if __name__ == "__main__":
     tokenizer_checkpoint_path = "/DnlLLM/src/DnlModel/DnlModel"
