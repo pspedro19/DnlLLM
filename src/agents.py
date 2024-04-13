@@ -40,7 +40,11 @@ class SimpleLLM:
         input_ids = self.tokenizer.encode(input_text, return_tensors="pt")
         if torch.cuda.is_available():
             input_ids = input_ids.to('cuda')
-        output = self.model.generate(
+
+        # Check if the model is wrapped with DataParallel and access the underlying model
+        actual_model = self.model.module if isinstance(self.model, torch.nn.DataParallel) else self.model
+
+        output = actual_model.generate(
             input_ids,
             max_length=50,
             num_return_sequences=1,
@@ -50,6 +54,7 @@ class SimpleLLM:
         )
         decoded_output = self.tokenizer.decode(output[0], skip_special_tokens=True)
         return decoded_output
+
 
 async def run_sales_agent(llm, memory):
     print("Welcome! You're chatting with DNL Agent. How may I assist you today?")
