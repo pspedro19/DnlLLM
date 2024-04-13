@@ -1,11 +1,11 @@
 import asyncio
 import torch
 import json
-import openai  # Import OpenAI library
-from langchain.llms import HuggingFaceLLM
-from langchain.chains import SingleTurnChain
-from langchain.prompts import RolePlayingPrompt
-from langchain.schema import Role
+import openai  # Ensure you've installed OpenAI's Python client library
+from langchain_community.llms import HuggingFaceLLM  # Updated import
+from langchain_community.chains import SingleTurnChain
+from langchain_community.prompts import RolePlayingPrompt
+from langchain_community.schema import Role
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from torch.nn import DataParallel
 
@@ -19,11 +19,9 @@ class Memory:
             self.memory = {}
 
     def get_closest_memory(self):
-        # Retrieve the last context used
         return self.memory.get("latest_context", "")
 
     def update_memory(self, context):
-        # Update memory with the latest context
         self.memory["latest_context"] = context
         with open(self.file_path, "w") as file:
             json.dump(self.memory, file)
@@ -54,29 +52,24 @@ async def run_sales_agent(model, tokenizer, memory):
         if user_input.lower() == "exit":
             print("DNL Agent: It was a pleasure assisting you. Goodbye!")
             break
-        # Retrieve memory context
         memory_context = memory.get_closest_memory()
         enhanced_input = f"{memory_context} {user_input}" if memory_context else user_input
         response = await asyncio.create_task(chain.run_turn({"user": enhanced_input}))
-        # Update memory with the latest interaction
         memory.update_memory(enhanced_input)
         print("DNL Agent:", response)
 
-# Run the sales agent interaction loop
 if __name__ == "__main__":
-    openai_api_key = input("Please enter your OpenAI API key: ")  # Request OpenAI API key
+    openai_api_key = input("Please enter your OpenAI API key: ")
     model_checkpoint_path = "/DnlLLM/src/results/20240412_211227/checkpoint-225"
     memory_path = "../data/memory.json"
     
     model = AutoModelForCausalLM.from_pretrained(model_checkpoint_path)
     tokenizer = AutoTokenizer.from_pretrained(model_checkpoint_path)
 
-    # Utilize all available GPUs
     if torch.cuda.is_available():
         model.cuda()
         model = DataParallel(model)
 
-    # Initialize memory system with the specified path
     memory = Memory(memory_path)
     
     asyncio.run(run_sales_agent(model, tokenizer, memory))
