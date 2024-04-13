@@ -55,19 +55,17 @@ async def run_sales_agent(llm, memory):
         print("DNL Agent:", response)
 
 if __name__ == "__main__":
-    openai_api_key = input("Please enter your OpenAI API key: ")
-    model_checkpoint_path = "/DnlLLM/src/results/20240412_211227/checkpoint-225"
-    memory_path = "../data/memory.json"
+    model_checkpoint_path = "../src/DnlModel"  # Relative path updated
+    memory_path = "../data/memory.json"  # Ensured the relative path
 
-    model = AutoModelForCausalLM.from_pretrained(model_checkpoint_path)
     tokenizer = AutoTokenizer.from_pretrained(model_checkpoint_path)
+    model = AutoModelForCausalLM.from_pretrained(model_checkpoint_path)
 
     if torch.cuda.is_available():
-        model.cuda()
+        model = model.cuda()
         model = DataParallel(model)
 
     memory = Memory(memory_path)
     llm = SimpleLLM(model, tokenizer)
 
     asyncio.run(run_sales_agent(llm, memory))
-
