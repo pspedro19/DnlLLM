@@ -65,9 +65,9 @@ async def run_sales_agent(llm, memory):
         print("DNL Agent:", response)
 
 if __name__ == "__main__":
-    model_checkpoint_path = "../src/DnlModel"
-    memory_path = "../data/memory.json"
-    vector_db_path = "../data/vector_db"  # Placeholder for vector model path
+    model_checkpoint_path = "/DnlLLM/src/DnlModel/DnlModel"  # Updated to point to the specific model directory
+    memory_path = "/DnlLLM/src/data/memory.json"  # Updated absolute path
+    vector_db_path = "sentence-transformers/all-MiniLM-L6-v2"  # Updated absolute path
 
     tokenizer = AutoTokenizer.from_pretrained(model_checkpoint_path)
     model = AutoModelForCausalLM.from_pretrained(model_checkpoint_path)
