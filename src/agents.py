@@ -30,7 +30,7 @@ class SimpleLLM:
         return decoded_output
 
 async def run_sales_agent(llm, memory):
-    sales_context = "As a sales agent, I am here to help you find the best products and offers. "  # Persistent role context
+    sales_context = "As a sales agent, I am here to help you find the best products and offers."  # Persistent role context
     print("Welcome! You're chatting with DNL Agent. How may I assist you today?")
     while True:
         user_input = input("You: ")
@@ -44,16 +44,17 @@ async def run_sales_agent(llm, memory):
         print("DNL Agent:", response)
 
 if __name__ == "__main__":
-    model_checkpoint_path = "/DnlLLM/src/DnlModel/"
-    memory_path = "/DnlLLM/data/memory.json"
+    tokenizer_checkpoint_path = "/DnlLLM/src/DnlModel/DnlModel"
+    model_checkpoint_path = "/DnlLLM/src/DnlModel/checkpoint-225"
 
-    tokenizer = AutoTokenizer.from_pretrained(model_checkpoint_path)
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer_checkpoint_path)
     model = AutoModelForCausalLM.from_pretrained(model_checkpoint_path)
 
     if torch.cuda.is_available():
         model = model.cuda()
         model = DataParallel(model)
 
+    memory_path = "/DnlLLM/data/memory.json"
     memory = EnhancedVectorMemory(memory_path)
     llm = SimpleLLM(model, tokenizer)
 
