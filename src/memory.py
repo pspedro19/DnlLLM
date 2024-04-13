@@ -10,8 +10,8 @@ class EnhancedVectorMemory:
 
     def load_memory(self):
         if not self.memory_file.exists():
-           print("Memory file does not exist, starting with an empty memory.")
-           return {}, torch.tensor([])
+            print("Memory file does not exist, starting with an empty memory.")
+            return {}
 
         with self.memory_file.open('r') as file:
             data = json.load(file)
@@ -20,15 +20,14 @@ class EnhancedVectorMemory:
 
             memories = {}
             for idx, item in enumerate(data):
-                 if not isinstance(item, dict) or 'Pregunta' not in item or 'Respuesta' not in item:
-                        raise ValueError("Each item must be a dictionary with 'Pregunta' and 'Respuesta' keys.")
-                 question = item['Pregunta'].replace("\n", " ")  # Replace newline characters with spaces
-                 answer = item['Respuesta'].replace("\n", " ")  # Replace newline characters with spaces
-                 memories[f"context_{idx+1}"] = f"{question} {answer}"
+                if not isinstance(item, dict) or 'Pregunta' not in item or 'Respuesta' not in item:
+                    raise ValueError("Each item must be a dictionary with 'Pregunta' and 'Respuesta' keys.")
+                question = item['Pregunta'].replace("\n", " ")
+                answer = item['Respuesta'].replace("\n", " ")
+                memories[f"context_{idx+1}"] = f"{question} {answer}"
 
-            memory_embeddings = self.model.encode(list(memories.values()), convert_to_tensor=True)
-            return memories, memory_embeddings
-
+            return memories
+        
 
     def save_memory(self):
         with self.memory_file.open('w') as file:
