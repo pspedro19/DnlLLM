@@ -1,7 +1,6 @@
 from sentence_transformers import SentenceTransformer, util
 import json
 from pathlib import Path
-import torch
 
 class EnhancedVectorMemory:
     def __init__(self, memory_file):
@@ -14,7 +13,8 @@ class EnhancedVectorMemory:
             return {}
         with self.memory_file.open('r') as file:
             data = json.load(file)
-            # Transform the list into a dictionary for memory storage if necessary
+            if not all(isinstance(item, dict) and 'Pregunta' in item and 'Respuesta' in item for item in data):
+                raise ValueError("JSON data is not in the expected format: each item must be a dictionary with 'Pregunta' and 'Respuesta'")
             return {f"context_{idx+1}": f"{item['Pregunta']} {item['Respuesta']}"
                     for idx, item in enumerate(data)}
 
@@ -33,8 +33,3 @@ class EnhancedVectorMemory:
         distances = util.pytorch_cos_sim(query_embedding, memory_embeddings)[0]
         closest_idx = torch.argmax(distances).item()
         return memories[closest_idx]
-
-# Example usage:
-# memory = EnhancedVectorMemory('/path/to/your/memory.json')
-# closest_context = memory.get_closest_memory("your query here")
-# memory.add_to_memory("new_context_key", "new memory context")
