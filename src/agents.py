@@ -72,9 +72,9 @@ async def run_sales_agent(llm, memory):
         print("DNL Agent:", response)
 
 if __name__ == "__main__":
-    model_checkpoint_path = "/DnlLLM/src/DnlModel/DnlModel"  # Updated to point to the specific model directory
-    memory_path = "/DnlLLM/src/data/memory.json"  # Updated absolute path
-    vector_db_path = "sentence-transformers/all-MiniLM-L6-v2"  # Updated absolute path
+    model_checkpoint_path = "/DnlLLM/src/DnlModel/DnlModel"  # Ensure this points to the correct model directory
+    memory_path = "/DnlLLM/data/memory.json"  # Corrected path to the memory file
+    vector_db_path = "sentence-transformers/all-MiniLM-L6-v2"  # Confirm this path if it's a local directory or a model identifier from Hugging Face
 
     tokenizer = AutoTokenizer.from_pretrained(model_checkpoint_path)
     model = AutoModelForCausalLM.from_pretrained(model_checkpoint_path)
@@ -87,3 +87,4 @@ if __name__ == "__main__":
     llm = SimpleLLM(model, tokenizer)
 
     asyncio.run(run_sales_agent(llm, memory))
+
