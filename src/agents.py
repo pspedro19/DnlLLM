@@ -1,70 +1,82 @@
 import asyncio
+import torch
+import json
+import openai  # Import OpenAI library
+from langchain.llms import HuggingFaceLLM
+from langchain.chains import SingleTurnChain
+from langchain.prompts import RolePlayingPrompt
+from langchain.schema import Role
 from transformers import AutoModelForCausalLM, AutoTokenizer
+from torch.nn import DataParallel
 
-# Definición de la clase SimpleLLM para simplificar la generación de texto con el modelo
-class SimpleLLM:
-    def __init__(self, model, tokenizer):
-        self.model = model
-        self.tokenizer = tokenizer
+class Memory:
+    def __init__(self, file_path):
+        self.file_path = file_path
+        try:
+            with open(file_path, "r") as file:
+                self.memory = json.load(file)
+        except FileNotFoundError:
+            self.memory = {}
 
-    async def run(self, input_text):
-        input_ids = self.tokenizer(input_text, return_tensors="pt")["input_ids"]
-        output = self.model.generate(
-            input_ids,
-            max_length=50,
-            num_return_sequences=1,
-            no_repeat_ngram_size=2,
-            early_stopping=False,  # Disable early stopping
-            pad_token_id=self.tokenizer.eos_token_id
-        )
-        decoded_output = self.tokenizer.decode(output[0], skip_special_tokens=True)
-        return decoded_output
+    def get_closest_memory(self):
+        # Retrieve the last context used
+        return self.memory.get("latest_context", "")
 
-# Definición de la clase SalesAgent para manejar las interacciones con el usuario
-class SalesAgent:
-    def __init__(self, model_checkpoint_path, memory_file="memory.json", max_execution_time=10):
-        # Carga del modelo y el tokenizer
-        self.hf_model = AutoModelForCausalLM.from_pretrained(model_checkpoint_path)
-        self.tokenizer = AutoTokenizer.from_pretrained(model_checkpoint_path)
-        self.simple_llm = SimpleLLM(self.hf_model, self.tokenizer)
-        #self.memory = EnhancedVectorMemory(memory_file) if 'EnhancedVectorMemory' in globals() else None
-        self.memory = None
-        self.max_execution_time = max_execution_time
+    def update_memory(self, context):
+        # Update memory with the latest context
+        self.memory["latest_context"] = context
+        with open(self.file_path, "w") as file:
+            json.dump(self.memory, file)
 
-    async def handle_query(self, user_input):
-        # Obtención de contexto de la memoria si está disponible
-        memory_context = self.memory.get_closest_memory(user_input) if self.memory else ""
-        enhanced_input = f"{user_input} {memory_context}" if memory_context else user_input
+# Define the role of the agent
+dnl_agent_role = Role(
+    name="DNL Agent",
+    description="I am DNL Agent, your assistant here to help you with sales and customer service."
+)
 
-        # Generación de respuestas usando el modelo HF y el modelo OpenAI
-        response_hf = await asyncio.wait_for(self.simple_llm.run(enhanced_input), timeout=self.max_execution_time)
-        #response_openai = await asyncio.wait_for(self.openai_model.run({"input": enhanced_input}), timeout=self.max_execution_time)
+# Define a role-playing prompt with the agent role
+prompt_builder = RolePlayingPrompt(
+    roles=[dnl_agent_role],
+    include_role_name_in_prompts=True
+)
 
-        # Selección de la respuesta más corta como final
-        #final_response = response_openai if len(response_openai) < len(response_hf) else response_hf
-        final_response = response_hf
-        if self.memory:
-            self.memory.add_to_memory("conversation", {"query": user_input, "response": final_response})
+# Define the main function to handle the sales agent interaction
+async def run_sales_agent(model, tokenizer, memory):
+    # Initialize the Hugging Face language model with parallel processing
+    hf_llm = HuggingFaceLLM(model, tokenizer=tokenizer)
 
-        return final_response
+    # Create a single-turn chain with the role-playing prompt
+    chain = SingleTurnChain(llm=hf_llm, prompt_builder=prompt_builder)
 
-    async def run(self):
-        # Solicitar la API key al usuario
-        #openai_api_key = input("Please enter your OpenAI API key: ")
+    print("Welcome! You're chatting with DNL Agent. How may I assist you today?")
+    while True:
+        user_input = input("You: ")
+        if user_input.lower() == "exit":
+            print("DNL Agent: It was a pleasure assisting you. Goodbye!")
+            break
+        # Retrieve memory context
+        memory_context = memory.get_closest_memory()
+        enhanced_input = f"{memory_context} {user_input}" if memory_context else user_input
+        response = await asyncio.create_task(chain.run_turn({"user": enhanced_input}))
+        # Update memory with the latest interaction
+        memory.update_memory(enhanced_input)
+        print("DNL Agent:", response)
 
-        # Bucle principal para interactuar con el usuario
-        while True:
-            user_input = input("You: ")
-            if user_input.lower() == "exit":
-                break
-            response = await self.handle_query(user_input)
-            print("Assistant:", response)
-
+# Run the sales agent interaction loop
 if __name__ == "__main__":
-    # Rutas de los archivos y parámetros necesarios
+    openai_api_key = input("Please enter your OpenAI API key: ")  # Request OpenAI API key
     model_checkpoint_path = "/DnlLLM/src/results/20240412_211227/checkpoint-225"
     memory_path = "../data/memory.json"
+    
+    model = AutoModelForCausalLM.from_pretrained(model_checkpoint_path)
+    tokenizer = AutoTokenizer.from_pretrained(model_checkpoint_path)
 
-    # Creación de una instancia de SalesAgent y ejecución del bucle principal
-    agent = SalesAgent(model_checkpoint_path, memory_file=memory_path)
-    asyncio.run(agent.run())
+    # Utilize all available GPUs
+    if torch.cuda.is_available():
+        model.cuda()
+        model = DataParallel(model)
+
+    # Initialize memory system with the specified path
+    memory = Memory(memory_path)
+    
+    asyncio.run(run_sales_agent(model, tokenizer, memory))
