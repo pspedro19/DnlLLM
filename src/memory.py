@@ -9,24 +9,25 @@ class EnhancedVectorMemory:
         self.memory = self.load_memory()
 
     def load_memory(self):
-        if not self.memory_file.exists():
-            print("Memory file does not exist, starting with an empty memory.")
-            return {}
+         if not self.memory_file.exists():
+              print("Memory file does not exist, starting with an empty memory.")
+              return {}
 
-        with self.memory_file.open('r') as file:
-            data = json.load(file)
-            if not isinstance(data, list):
-                raise ValueError("Memory data should be a list of dictionaries.")
+         with self.memory_file.open('r') as file:
+              data = json.load(file)
+              if not isinstance(data, list):
+                  raise ValueError("Memory data should be a list of dictionaries.")
 
-            memories = {}
-            for idx, item in enumerate(data):
-                if not isinstance(item, dict) or 'Pregunta' not in item or 'Respuesta' not in item:
-                    raise ValueError("Each item must be a dictionary with 'Pregunta' and 'Respuesta' keys.")
-                question = item['Pregunta'].replace("\n", " ")
-                answer = item['Respuesta'].replace("\n", " ")
-                memories[f"context_{idx+1}"] = f"{question} {answer}"
+              memories = {}
+              for idx, item in enumerate(data):
+                 if not isinstance(item, dict) or 'Pregunta' not in item or 'Respuesta' not in item:
+                        raise ValueError("Each item must be a dictionary with 'Pregunta' and 'Respuesta' keys.")
+                 question = item['Pregunta'].replace("\n", " ")
+                 answer = item['Respuesta'].replace("\n", " ")
+                 memories[f"context_{idx+1}"] = f"{question} {answer}"
 
-            return memories
+              return memories
+
         
 
     def save_memory(self):
