@@ -19,11 +19,11 @@ class SimpleLLM:
         actual_model = self.model.module if isinstance(self.model, DataParallel) else self.model
         output = actual_model.generate(
             input_ids,
-            max_new_tokens=30,
+            max_new_tokens=50,  # Increased token generation for more context
             num_return_sequences=1,
             no_repeat_ngram_size=2,
             pad_token_id=self.tokenizer.eos_token_id,
-            num_beams=3,
+            num_beams=5,  # Increased beams for better selection
             early_stopping=True
         )
         decoded_output = self.tokenizer.decode(output[0], skip_special_tokens=True)
@@ -36,11 +36,14 @@ async def run_sales_agent(llm, memory):
         if user_input.lower() == "exit":
             print("DNL Agent: It was a pleasure assisting you. Goodbye!")
             break
-        memory_response = memory.get_closest_memory(user_input)  # Removed 'await' here
-        enhanced_input = f"{memory_response} {user_input}" if memory_response else user_input
-        response = await llm.generate_text(enhanced_input)
-        memory.add_to_memory(user_input, response)  # Assuming add_to_memory is not async
-        print("DNL Agent:", response)
+        try:
+            memory_response = memory.get_closest_memory(user_input)
+            enhanced_input = f"{memory_response} {user_input}" if memory_response else user_input
+            response = await llm.generate_text(enhanced_input)
+            memory.add_to_memory(user_input, response)  # Assuming add_to_memory is not async
+            print("DNL Agent:", response)
+        except Exception as e:
+            print(f"An error occurred: {e}")
 
 if __name__ == "__main__":
     tokenizer_checkpoint_path = "/DnlLLM/src/DnlModel/DnlModel"
