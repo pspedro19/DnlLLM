@@ -80,12 +80,7 @@ def train_model(model, train_dataset, eval_dataset, peft_config, tokenizer, trai
     trainer.train()
     return trainer
 
-def verify_files(model_path):
-    required_files = ['config.json', 'pytorch_model.bin']
-    missing_files = [f for f in required_files if not os.path.isfile(os.path.join(model_path, f))]
-    if missing_files:
-        raise FileNotFoundError(f"Missing essential files: {', '.join(missing_files)}")
-    print("All required model files are present.")
+
 
 def save_and_push_model(trainer, model_name, output_dir, hf_token):
     model_path = os.path.join(output_dir, model_name)
@@ -94,7 +89,7 @@ def save_and_push_model(trainer, model_name, output_dir, hf_token):
     trainer.tokenizer.save_pretrained(model_path)  # Save the tokenizer
     trainer.save_state()  # Save optimizer, scheduler, and trainer state
     trainer.args.to_json_file(os.path.join(model_path, "training_args.json"))  # Save training arguments
-    verify_files(model_path)  # Verify that required files are present
+    
 
     # Optional: Save custom files like README or adapter configs if needed
     with open(os.path.join(model_path, "README.md"), "w") as f:
@@ -123,8 +118,14 @@ def main():
 
     model_name = "mistralai/Mistral-7B-v0.1"
     dataset_name = "mlabonne/guanaco-llama2-1k"
+    new_model_name = "DnlModel"
     output_dir = "/DnlLLM/src/DnlModel"  # Updated path
     ensure_dir(output_dir)
+
+    bnb_config = BitsAndBytesConfig(
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_use_double_quant=True,
+    )  # Define the BitsAndBytesConfig
 
     dataset = load_dataset(dataset_name)
     train_dataset = dataset['train'].train_test_split(test_size=0.1)['train']
@@ -142,7 +143,7 @@ def main():
         wandb.init(project="Model Training")
         wandb.log(eval_results)
 
-        save_and_push_model(trainer, "new_model_name", output_dir, hf_token)  # Ensure this is called
+        save_and_push_model(trainer, new_model_name, output_dir, hf_token)  # Ensure this is called
     except Exception as e:
         print(f"An error occurred during training or evaluation: {e}")
 
@@ -150,3 +151,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
