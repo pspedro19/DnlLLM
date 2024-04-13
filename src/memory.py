@@ -5,16 +5,23 @@ from pathlib import Path
 class EnhancedVectorMemory:
     def __init__(self, memory_file):
         self.memory_file = Path(memory_file)
-        self.memory = self.load_memory()
         self.model = SentenceTransformer('all-MiniLM-L6-v2')
+        self.memory = self.load_memory()
 
     def load_memory(self):
         if not self.memory_file.exists():
+            print("Memory file does not exist, starting with an empty memory.")
             return {}
+        
         with self.memory_file.open('r') as file:
             data = json.load(file)
-            if not all(isinstance(item, dict) and 'Pregunta' in item and 'Respuesta' in item for item in data):
-                raise ValueError("JSON data is not in the expected format: each item must be a dictionary with 'Pregunta' and 'Respuesta'")
+            if not isinstance(data, list):
+                raise ValueError("Memory data should be a list of dictionaries.")
+
+            for item in data:
+                if not isinstance(item, dict) or 'Pregunta' not in item or 'Respuesta' not in item:
+                    raise ValueError("Each item must be a dictionary with 'Pregunta' and 'Respuesta' keys.")
+            
             return {f"context_{idx+1}": f"{item['Pregunta']} {item['Respuesta']}"
                     for idx, item in enumerate(data)}
 

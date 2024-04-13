@@ -44,7 +44,7 @@ async def run_sales_agent(llm, memory):
         print("DNL Agent:", response)
 
 if __name__ == "__main__":
-    model_checkpoint_path = "/DnlLLM/src/DnlModel/DnlModel"
+    model_checkpoint_path = "/DnlLLM/src/DnlModel/"
     memory_path = "/DnlLLM/data/memory.json"
 
     tokenizer = AutoTokenizer.from_pretrained(model_checkpoint_path)
