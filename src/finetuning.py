@@ -1,6 +1,7 @@
 import os
 import datetime
 import warnings
+import shutil
 from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments, BitsAndBytesConfig
 from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model
 from trl import SFTTrainer
@@ -88,9 +89,25 @@ def verify_files(model_path):
 
 def save_and_push_model(trainer, model_name, output_dir, hf_token):
     model_path = os.path.join(output_dir, model_name)
-    trainer.model.save_pretrained(model_path)
-    trainer.tokenizer.save_pretrained(model_path)
-    verify_files(model_path)
+    os.makedirs(model_path, exist_ok=True)  # Ensure the directory exists
+    trainer.model.save_pretrained(model_path)  # Save the model
+    trainer.tokenizer.save_pretrained(model_path)  # Save the tokenizer
+    trainer.save_state()  # Save optimizer, scheduler, and trainer state
+    trainer.args.to_json_file(os.path.join(model_path, "training_args.json"))  # Save training arguments
+    verify_files(model_path)  # Verify that required files are present
+
+    # Optional: Save custom files like README or adapter configs if needed
+    with open(os.path.join(model_path, "README.md"), "w") as f:
+        f.write("Model and tokenizer trained with custom training loop.")
+
+    # If using model adapters and want to save adapter-specific configurations
+    if hasattr(trainer.model.config, "adapter_config"):
+        with open(os.path.join(model_path, "adapter_config.json"), "w") as f:
+            f.write(trainer.model.config.adapter_config.to_json_string())
+
+    # Copy safetensors if exists
+    if os.path.exists("path/to/local/safetensors"):
+        shutil.copy("path/to/local/safetensors", os.path.join(model_path, "adapter_model.safetensors"))
 
     try:
         HfFolder.save_token(hf_token)
@@ -99,7 +116,6 @@ def save_and_push_model(trainer, model_name, output_dir, hf_token):
     except Exception as e:
         print(f"Failed to save or push model: {e}")
 
-
 def main():
     hf_token = input("Enter your Hugging Face token: ")
     wb_token = input("Enter your Weights & Biases token: ")
@@ -107,13 +123,7 @@ def main():
 
     model_name = "mistralai/Mistral-7B-v0.1"
     dataset_name = "mlabonne/guanaco-llama2-1k"
-    new_model_name = "DnlModel"
-    bnb_config = BitsAndBytesConfig(
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_use_double_quant=True,
-    )
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_dir = os.path.join("results", timestamp)
+    output_dir = "/DnlLLM/src/DnlModel"  # Updated path
     ensure_dir(output_dir)
 
     dataset = load_dataset(dataset_name)
@@ -132,7 +142,7 @@ def main():
         wandb.init(project="Model Training")
         wandb.log(eval_results)
 
-        save_and_push_model(trainer, new_model_name, output_dir, hf_token)
+        save_and_push_model(trainer, "new_model_name", output_dir, hf_token)  # Ensure this is called
     except Exception as e:
         print(f"An error occurred during training or evaluation: {e}")
 
