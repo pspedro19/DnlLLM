@@ -1,14 +1,14 @@
 import os
 import datetime
 import warnings
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, TrainingArguments
+from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments, HfFolder
 from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model
 from trl import SFTTrainer
 from datasets import load_dataset
 import torch
 import wandb
 
-# Suppress the specific UserWarning from torch.utils.checkpoint
+# Suppress specific UserWarnings
 warnings.filterwarnings("ignore", message="torch.utils.checkpoint: please pass in use_reentrant=True or use_reentrant=False explicitly.")
 
 def load_model_and_tokenizer(model_name, bnb_config):
@@ -37,7 +37,7 @@ def add_adopter_to_model(model):
     return model, peft_config
 
 def set_hyperparameters(output_dir):
-    training_arguments = TrainingArguments(
+    return TrainingArguments(
         output_dir=output_dir,
         num_train_epochs=1,
         per_device_train_batch_size=4,
@@ -56,7 +56,6 @@ def set_hyperparameters(output_dir):
         lr_scheduler_type="constant",
         report_to="wandb",
     )
-    return training_arguments
 
 def train_model(model, train_dataset, eval_dataset, peft_config, tokenizer, training_arguments):
     tokenizer.padding_side = 'right'
@@ -75,12 +74,23 @@ def train_model(model, train_dataset, eval_dataset, peft_config, tokenizer, trai
     trainer.train()
     return trainer
 
-def save_and_push_model(trainer, new_model_name, hf_token):
+def save_and_push_model(trainer, model_name, output_dir, hf_token):
+    model_path = os.path.join(output_dir, model_name)
+    trainer.model.save_pretrained(model_path)
+    trainer.tokenizer.save_pretrained(model_path)
+
+    # Verify the presence of necessary files
+    required_files = ['config.json', 'pytorch_model.bin']
+    missing_files = [f for f in required_files if not os.path.exists(os.path.join(model_path, f))]
+    if missing_files:
+        print("Missing files in the model directory:", ', '.join(missing_files))
+    else:
+        print("All necessary model files are saved successfully.")
+    
     try:
-        from huggingface_hub import HfFolder
         HfFolder.save_token(hf_token)
-        trainer.model.save_pretrained(new_model_name)
-        trainer.model.push_to_hub(new_model_name)
+        trainer.model.push_to_hub(model_name)
+        print("Model pushed to Hugging Face Hub successfully.")
     except Exception as e:
         print(f"Failed to save or push model: {e}")
 
@@ -110,7 +120,7 @@ def main():
         eval_results = trainer.evaluate()
         print("Evaluation results:", eval_results)
         wandb.log(eval_results)
-        save_and_push_model(trainer, new_model_name, hf_token)
+        save_and_push_model(trainer, new_model_name, output_dir, hf_token)
     except Exception as e:
         print(f"An error occurred during training or evaluation: {e}")
 
