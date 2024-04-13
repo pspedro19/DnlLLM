@@ -36,10 +36,10 @@ async def run_sales_agent(llm, memory):
         if user_input.lower() == "exit":
             print("DNL Agent: It was a pleasure assisting you. Goodbye!")
             break
-        memory_response = await memory.get_closest_memory(user_input)
+        memory_response = memory.get_closest_memory(user_input)  # Removed 'await' here
         enhanced_input = f"{memory_response} {user_input}" if memory_response else user_input
         response = await llm.generate_text(enhanced_input)
-        await memory.add_to_memory(user_input, response)  # Save interaction to memory
+        memory.add_to_memory(user_input, response)  # Assuming add_to_memory is not async
         print("DNL Agent:", response)
 
 if __name__ == "__main__":
