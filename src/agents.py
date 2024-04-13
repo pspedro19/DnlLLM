@@ -12,14 +12,14 @@ class SimpleLLM:
         self.tokenizer = tokenizer
 
     async def generate_text(self, input_text):
-        input_ids = self.tokenizer.encode(input_text, return_tensors="pt")
+        input_ids = self.tokenizer.encode(input_text, return_tensors="pt", truncation=True, max_length=1024)
         if torch.cuda.is_available():
             input_ids = input_ids.to('cuda')
 
         actual_model = self.model.module if isinstance(self.model, torch.nn.DataParallel) else self.model
         output = actual_model.generate(
             input_ids,
-            max_length=50,
+            max_new_tokens=30,  # Specifies the number of new tokens to generate
             num_return_sequences=1,
             no_repeat_ngram_size=2,
             pad_token_id=self.tokenizer.eos_token_id,
