@@ -1,12 +1,16 @@
 import os
 import datetime
 import warnings
-from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments, HfFolder
+from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments
+from huggingface_hub import HfFolder  # Corrected import
 from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model
 from trl import SFTTrainer
 from datasets import load_dataset
 import torch
 import wandb
+
+# Rest of the code remains the same...
+
 
 # Suppress specific UserWarnings
 warnings.filterwarnings("ignore", message="torch.utils.checkpoint: please pass in use_reentrant=True or use_reentrant=False explicitly.")
