@@ -122,7 +122,7 @@ def main():
     wb_token = input("Enter your Weights & Biases token: ")
     wandb.login(key=wb_token)
 
-    model_name = "mistralai/Mistral-7B-v0.1"
+    model_name = "TheBloke/guanaco-7B-HF"
     dataset_name = "mlabonne/guanaco-llama2-1k"
     new_model_name = "DnlModel"
     output_dir = "/DnlLLM/src/DnlModel"  # Updated path
